@@ -1,5 +1,6 @@
-streamlit
-pandas
-numpy
-anthropic
-openpyxl
+streamlit==1.28.1
+pandas==2.0.3
+numpy==1.24.3
+anthropic==0.25.1
+openpyxl==3.11.0
+python-dotenv==1.0.0

@@ -45,8 +45,11 @@ if not api_key:
     st.warning("⚠️ Please enter your Anthropic API Key in the sidebar to proceed")
     st.stop()
 
-# Initialize Anthropic client
-client = Anthropic()
+# Initialize Anthropic client with API key from sidebar
+if api_key:
+    client = Anthropic(api_key=api_key)
+else:
+    client = None
 
 # Main content
 st.header("Upload & Analyze Time Series Data")
@@ -122,16 +125,16 @@ if 'df' in st.session_state:
     
     # Claude Analysis
     if analyze_button:
-        with st.spinner("🤖 Claude is analyzing your data..."):
-            try:
-                # Prepare data summary for Claude
-                data_summary = f"""
+        if not client:
+            st.error("❌ API key not configured. Please enter your API key in the sidebar.")
+        else:
+            with st.spinner("🤖 Claude is analyzing your data..."):
+                try:
+                    # Prepare data summary for Claude
+                    data_summary = f"""
 File Name: {st.session_state.file_name}
 Shape: {df.shape[0]} rows × {df.shape[1]} columns
 Columns: {', '.join(df.columns.tolist())}
-
-Data Info:
-{df.info(buf=io.StringIO())}
 
 Statistical Summary:
 {df.describe().to_string()}
@@ -139,15 +142,15 @@ Statistical Summary:
 First few rows:
 {df.head(10).to_string()}
 """
-                
-                # Send to Claude
-                message = client.messages.create(
-                    model="claude-3-5-sonnet-20241022",
-                    max_tokens=2000,
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": f"""
+                    
+                    # Send to Claude
+                    message = client.messages.create(
+                        model="claude-3-5-sonnet-20241022",
+                        max_tokens=2000,
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": f"""
 You are an expert data analyst specializing in time series analysis. 
 Analyze the following dataset and provide:
 
@@ -162,51 +165,51 @@ Dataset:
 
 Please provide a comprehensive analysis with specific recommendations for improvement.
 """
-                        }
-                    ]
-                )
-                
-                analysis_result = message.content[0].text
-                
-                # Display analysis results
-                st.subheader("🎯 AI Analysis Results")
-                st.markdown(analysis_result)
-                
-                # Save analysis to session state
-                st.session_state.analysis = analysis_result
-                
-                # Provide download options
-                st.subheader("📥 Download Results")
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    # Download analysis as text
-                    analysis_text = f"Time Series Analysis Report\n{'='*50}\n\nFile: {st.session_state.file_name}\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{analysis_result}"
-                    st.download_button(
-                        label="📄 Download Analysis (TXT)",
-                        data=analysis_text,
-                        file_name=f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
-                        mime="text/plain"
+                            }
+                        ]
                     )
-                
-                with col2:
-                    # Download data with analysis
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df.to_excel(writer, sheet_name='Data', index=False)
-                        analysis_df = pd.DataFrame({'Analysis': [analysis_result]})
-                        analysis_df.to_excel(writer, sheet_name='Analysis', index=False)
                     
-                    output.seek(0)
-                    st.download_button(
-                        label="📊 Download Data + Analysis (XLSX)",
-                        data=output.getvalue(),
-                        file_name=f"analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
-                
-            except Exception as e:
-                st.error(f"❌ Error during analysis: {str(e)}")
+                    analysis_result = message.content[0].text
+                    
+                    # Display analysis results
+                    st.subheader("🎯 AI Analysis Results")
+                    st.markdown(analysis_result)
+                    
+                    # Save analysis to session state
+                    st.session_state.analysis = analysis_result
+                    
+                    # Provide download options
+                    st.subheader("📥 Download Results")
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        # Download analysis as text
+                        analysis_text = f"Time Series Analysis Report\n{'='*50}\n\nFile: {st.session_state.file_name}\nGenerated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n{analysis_result}"
+                        st.download_button(
+                            label="📄 Download Analysis (TXT)",
+                            data=analysis_text,
+                            file_name=f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                            mime="text/plain"
+                        )
+                    
+                    with col2:
+                        # Download data with analysis
+                        output = io.BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            df.to_excel(writer, sheet_name='Data', index=False)
+                            analysis_df = pd.DataFrame({'Analysis': [analysis_result]})
+                            analysis_df.to_excel(writer, sheet_name='Analysis', index=False)
+                        
+                        output.seek(0)
+                        st.download_button(
+                            label="📊 Download Data + Analysis (XLSX)",
+                            data=output.getvalue(),
+                            file_name=f"analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    
+                except Exception as e:
+                    st.error(f"❌ Error during analysis: {str(e)}")
 
 # Footer
 st.markdown("---")
