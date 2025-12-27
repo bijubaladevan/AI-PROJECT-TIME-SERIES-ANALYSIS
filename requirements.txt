@@ -1,5 +1,5 @@
-streamlit>=1.28.0
-pandas>=2.0.0
-numpy>=1.24.0
-anthropic>=0.7.0
-openpyxl>=3.10.0
+streamlit
+pandas
+numpy
+anthropic
+openpyxl
